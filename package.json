@@ -1,6 +1,6 @@
 {
   "name": "simple-kernel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An easy way to create simple interfaces",
   "main": "lib/index.js",
   "scripts": {
