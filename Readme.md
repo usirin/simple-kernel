@@ -34,10 +34,7 @@ const kernel = createKernel({
   ]
 })
 
-// immutability at its heart.
-// each operation will return a new kernel instance,
-// so that snapshotting is really easy.
-kernel = kernel.boot().then(context => {
+kernel.boot().then(context => {
   console.log('kernel is booted with context: ', context)
   // => kernel is booted with context: {reactor: reactor<Nuclear.Reactor>, ConfigModule: true}
 })
