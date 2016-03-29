@@ -1,7 +1,7 @@
 import expect from 'expect'
 import assign from 'lodash.assign'
 
-import { createKernel } from '../src'
+import { createKernel, Interface } from '../src'
 import SimpleKernelInterface from '../src/interfaces/SimpleKernelInterface'
 
 describe('simple-kernel', () => {
@@ -13,6 +13,10 @@ describe('simple-kernel', () => {
     let kernel = createKernel({bootstrappers: []})
 
     expect(SimpleKernelInterface.isInstance(kernel)).toBe(true)
+  })
+
+  it('should export its interface', () => {
+    expect(Interface).toBe(SimpleKernelInterface)
   })
 
   it('returns registered bootstrappers', () => {
