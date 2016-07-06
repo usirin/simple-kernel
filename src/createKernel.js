@@ -1,5 +1,6 @@
 import invariant from 'invariant'
-import {waterfall} from 'async'
+import Promise from 'bluebird'
+
 
 /**
  * Factory function for creating a kernel.
@@ -16,6 +17,7 @@ export default function createKernel(options = {}) {
   )
 
   const bootstrappers = [].concat(options.bootstrappers)
+  const middlewares = [].concat(options.middlewares || [])
 
   return {
     /**
@@ -35,49 +37,43 @@ export default function createKernel(options = {}) {
      * @returns {Promise}
      */
     boot() {
-      // transform bootstrappers so that it can be executed as async-waterfall
-      // tasks.
-      let asyncified = asyncify(bootstrappers)
+      return Promise.reduce(bootstrappers, (context, bootstrapper, index) => {
+        if (isEmpty(context)) {
+          context = undefined
+        }
 
-      return new Promise((resolve, reject) => {
+        bootstrapper = applyMiddlewares(bootstrapper, middlewares)
 
-        // this is gonna run registered bootstrappers sequentially and it will
-        // return the result of the last bootstrapper.
-        waterfall(asyncified, (err, finalContext) => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(finalContext)
-          }
-        })
-      })
+        return bootstrapper.bootstrap(context)
+      }, {})
     }
   }
 }
 
 /**
- * Helper for turning bootstrappers collection to functions that are compatible
- * with async-waterfall.
+ * Apply given middlewares to bootstrapper.
  *
- * @private
- * @param {Array<BootstrapperInterface>} bootstrappers
- * @returns {Array<Function>}
+ * @public
+ * @param {BootstrapperInterface} bootstrapper
+ * @param {Array<MiddlewareInterface>} middlewares
+ * @returns {function}
  */
-function asyncify(bootstrappers) {
-  return bootstrappers.map(bootstrapper => {
-    return (context, callback) => {
-      // async/waterfall doesn't pass initial context
-      if ('function' === typeof context) {
-        callback = context
-        // this way bootstrappers can inject their default values and the first
-        // bootstrapper's default context will be used as inital context and
-        // the first bootstrapper's default context will be used as inital
-        // context.
-        context = undefined
-      }
-      const newContext = bootstrapper.bootstrap(context)
+const applyMiddlewares = (bootstrapper, middlewares) => {
 
-      callback(null, newContext)
-    }
+  middlewares = middlewares.slice()
+  middlewares.reverse()
+
+  let { bootstrap } = bootstrapper
+
+  middlewares.forEach(middleware => {
+    bootstrap = middleware(bootstrapper)(bootstrap)
   })
+
+  return Object.assign({}, bootstrapper, { bootstrap })
 }
+
+const isEmpty = obj => (
+  Object.keys(obj).length === 0 && obj.constructor === Object
+)
+
+

@@ -1,6 +1,6 @@
 {
   "name": "simple-kernel",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An easy way to create simple interfaces",
   "main": "lib/index.js",
   "scripts": {
@@ -16,6 +16,7 @@
   "license": "MIT",
   "dependencies": {
     "async": "^1.5.2",
+    "bluebird": "^3.4.1",
     "invariant": "^2.2.1",
     "simple-interface": "^0.1.3"
   },
