@@ -5,6 +5,8 @@ import { createKernel, Interface } from '../src'
 import SimpleKernelInterface from '../src/interfaces/SimpleKernelInterface'
 
 describe('simple-kernel', () => {
+  afterEach(() => expect.restoreSpies())
+
   it('requires bootstrappers', () => {
     expect(() => createKernel()).toThrow(/Expected bootstrappers to be an Array/)
   })
@@ -237,5 +239,36 @@ describe('simple-kernel', () => {
 
   describe('middleware support', () => {
 
+    it('has middleware support for extending functionality of bootstrap methods', (done) => {
+      const logger = bootstrapper => next => context => {
+        console.info(`running bootstrapper(${bootstrapper.name})`)
+        const newContext = next(context)
+        console.info(`final context: ${JSON.stringify(newContext)}`)
+        return newContext
+      }
+
+      const bootstrapper = {
+        name: 'foo',
+        bootstrap(context = {}) {
+          return Object.assign({}, context, {foo: true})
+        }
+      }
+
+      let spy = expect.spyOn(console, 'info')
+
+      createKernel({
+        middlewares: [logger],
+        bootstrappers: [bootstrapper]
+      }).boot().then(context => {
+        const args = extractArgs(spy)
+        expect(args).toInclude(`running bootstrapper(foo)`)
+        expect(args).toInclude(`final context: {"foo":true}`)
+        expect(context).toEqual({ foo: true })
+        done()
+      })
+    })
+
   })
 })
+
+const extractArgs = spy => spy.calls.map(c => c.arguments).reduce((args, arg) => args.concat(arg))

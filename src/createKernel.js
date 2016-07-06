@@ -17,6 +17,7 @@ export default function createKernel(options = {}) {
   )
 
   const bootstrappers = [].concat(options.bootstrappers)
+  const middlewares = [].concat(options.middlewares || [])
 
   return {
     /**
@@ -40,9 +41,39 @@ export default function createKernel(options = {}) {
         if (isEmpty(context)) {
           context = undefined
         }
+
+        bootstrapper = applyMiddlewares(bootstrapper, middlewares)
+
         return bootstrapper.bootstrap(context)
       }, {})
     }
   }
 }
+
+/**
+ * Apply given middlewares to bootstrapper.
+ *
+ * @public
+ * @param {BootstrapperInterface} bootstrapper
+ * @param {Array<MiddlewareInterface>} middlewares
+ * @returns {function}
+ */
+const applyMiddlewares = (bootstrapper, middlewares) => {
+
+  middlewares = middlewares.slice()
+  middlewares.reverse()
+
+  let { bootstrap } = bootstrapper
+
+  middlewares.forEach(middleware => {
+    bootstrap = middleware(bootstrapper)(bootstrap)
+  })
+
+  return Object.assign({}, bootstrapper, { bootstrap })
+}
+
+const isEmpty = obj => (
+  Object.keys(obj).length === 0 && obj.constructor === Object
+)
+
 
