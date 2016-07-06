@@ -1,5 +1,6 @@
 import invariant from 'invariant'
-import {waterfall} from 'async'
+import Promise from 'bluebird'
+
 
 /**
  * Factory function for creating a kernel.
@@ -35,49 +36,13 @@ export default function createKernel(options = {}) {
      * @returns {Promise}
      */
     boot() {
-      // transform bootstrappers so that it can be executed as async-waterfall
-      // tasks.
-      let asyncified = asyncify(bootstrappers)
-
-      return new Promise((resolve, reject) => {
-
-        // this is gonna run registered bootstrappers sequentially and it will
-        // return the result of the last bootstrapper.
-        waterfall(asyncified, (err, finalContext) => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(finalContext)
-          }
-        })
-      })
+      return Promise.reduce(bootstrappers, (context, bootstrapper, index) => {
+        if (isEmpty(context)) {
+          context = undefined
+        }
+        return bootstrapper.bootstrap(context)
+      }, {})
     }
   }
 }
 
-/**
- * Helper for turning bootstrappers collection to functions that are compatible
- * with async-waterfall.
- *
- * @private
- * @param {Array<BootstrapperInterface>} bootstrappers
- * @returns {Array<Function>}
- */
-function asyncify(bootstrappers) {
-  return bootstrappers.map(bootstrapper => {
-    return (context, callback) => {
-      // async/waterfall doesn't pass initial context
-      if ('function' === typeof context) {
-        callback = context
-        // this way bootstrappers can inject their default values and the first
-        // bootstrapper's default context will be used as inital context and
-        // the first bootstrapper's default context will be used as inital
-        // context.
-        context = undefined
-      }
-      const newContext = bootstrapper.bootstrap(context)
-
-      callback(null, newContext)
-    }
-  })
-}
